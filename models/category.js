@@ -19,12 +19,16 @@ module.exports = (sequelize, DataTypes) => {
       },
       sold_product_amount: {
         type: DataTypes.INTEGER,
-        allowNull: false,
       },
     },
     {
       sequelize,
       modelName: "Category",
+      hooks: {
+        beforeCreate: (category, opt) => {
+          category.sold_product_amount = 0;
+        },
+      },
     }
   );
   return Category;
