@@ -1,16 +1,17 @@
 const { User } = require("../models");
 const { hashPassword, comparePassword } = require("../helpers/bcrypt");
 const { generateToken } = require("../middlewares/auth");
-
+const numeral = require("numeral");
+function string2money(value) {
+  return numeral(`${value}`).format("0,0");
+}
 exports.registerUser = async (req, res) => {
   const body = req.body;
   const fullName = body.full_name;
   const email = body.email;
-  const username = body.username;
   const password = body.password;
-  const profileImageUrl = body.profile_image_url;
-  const age = body.age;
-  const phoneNumber = body.phone_number;
+  const gender = body.gender;
+  const role = "customer";
   await User.findOne({
     where: {
       email,
@@ -25,35 +26,37 @@ exports.registerUser = async (req, res) => {
         User.create({
           full_name: fullName,
           email: email,
-          username: username,
-          password: hashPassword(password),
-          profile_image_url: profileImageUrl,
-          age: age,
-          phone_number: phoneNumber,
+          password: password,
+          gender: gender,
+          role: role,
         })
           .then((user) => {
             const token = generateToken({
+              id: user.id,
               full_name: user.full_name,
               email: user.email,
-              username: user.username,
-              profile_image_url: user.profile_image_url,
-              age: user.age,
-              phone_number: user.phone_number,
+              gender: user.gender,
+              role: user.role,
             });
             res.status(201).json({
               user: {
-                email: user.email,
+                id: user.id,
                 full_name: user.full_name,
-                username: user.username,
-                profile_image_url: user.profile_image_url,
-                age: user.age,
-                phone_number: user.phone_number,
+                email: user.email,
+                gender: user.gender,
+                balance: `Rp ${string2money(user.balance)}`,
+                createdAt: user.createdAt,
               },
             });
           })
           .catch((e) => {
-            console.log(e);
-            res.status(503).json(e.errors);
+            let message = [];
+            e.errors.forEach((item) => {
+              message.push({
+                [item.path]: item.message,
+              });
+            });
+            res.status(503).json({ errors: e.message });
           });
       }
     })
@@ -91,17 +94,108 @@ exports.loginUser = async (req, res) => {
         });
       }
       let payload = {
+        id: user.id,
         full_name: user.full_name,
         email: user.email,
-        username: user.username,
-        profile_image_url: user.profile_image_url,
-        age: user.age,
-        phone_number: user.phone_number,
+        gender: user.gender,
+        role: user.role,
       };
       const token = generateToken(payload);
       return res.status(200).json({ token });
     })
     .catch((err) => {
       return res.status(401).json(err);
+    });
+};
+
+exports.putUser = async (req, res) => {
+  const userIdFromHeader = req.userId;
+  const userIdFromParams = req.params.userId;
+  if (userIdFromHeader != userIdFromParams) {
+    return res.status(400).json({
+      message: "Tidak Memiliki Hak Untuk Mengubah User Tersebut",
+    });
+  }
+  const { full_name, email } = req.body;
+  let data = {
+    email,
+    full_name,
+  };
+  await User.update(data, {
+    where: {
+      id: userIdFromHeader,
+    },
+    returning: true,
+    plain: true,
+  })
+    .then((user) => {
+      res.status(200).json({
+        user: {
+          id: user[1].dataValues.id,
+          full_name: user[1].dataValues.full_name,
+          email: user[1].dataValues.email,
+          createdAt: user[1].dataValues.createdAt,
+          updatedAt: user[1].dataValues.updatedAt,
+        },
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        message: "Gagal Mengubah Data",
+      });
+    });
+};
+
+exports.deleteUser = async (req, res) => {
+  const userIdFromHeader = req.userId;
+  const userIdFromParams = req.params.userId;
+  if (userIdFromParams != userIdFromHeader) {
+    return res.status(400).json({
+      message: "Tidak Memiliki Hak Untuk Menghapus User Tersebut",
+    });
+  }
+  await User.destroy({
+    where: {
+      id: userIdFromParams,
+    },
+  })
+    .then((result) => {
+      res.status(200).json({
+        message: "Your Account Has Been successfully deleted",
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        message: "Gagal Menghapus User",
+      });
+    });
+};
+
+exports.patchUser = async (req, res) => {
+  const userIdFromHeader = req.userId;
+  const user = await User.findByPk(userIdFromHeader);
+  const { balance } = req.body;
+  const newBalance = parseFloat(balance) + parseFloat(user.balance);
+  let data = {
+    balance: newBalance,
+  };
+  await User.update(data, {
+    where: {
+      id: userIdFromHeader,
+    },
+    returning: true,
+    plain: true,
+  })
+    .then((user) => {
+      res.status(200).json({
+        message: `Your balance has been successfully updated to Rp ${string2money(
+          user[1].dataValues.balance
+        )}`,
+      });
+    })
+    .catch((err) => {
+      res.status(500).json({
+        message: err.message,
+      });
     });
 };
