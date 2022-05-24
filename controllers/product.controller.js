@@ -1,12 +1,5 @@
 const { User, Product } = require("../models");
 exports.getProduct = async (req, res) => {
-  const userIdFromHeaders = req.userId;
-  const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
-    return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Melihat Product",
-    });
-  }
   await Product.findAll()
     .then((product) => {
       res.status(200).json({ products: product });
@@ -37,7 +30,7 @@ exports.postProduct = async (req, res) => {
         product: {
           id: product.id,
           title: product.title,
-          price: product.price,
+          price:  `Rp ${string2money(product.price)}`,
           stock: product.stock,
           CategoryId: product.CategoryId,
           updatedAt: product.updatedAt,
