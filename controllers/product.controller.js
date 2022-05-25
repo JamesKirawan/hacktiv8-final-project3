@@ -1,4 +1,8 @@
 const { User, Product } = require("../models");
+const numeral = require("numeral");
+function string2money(value) {
+  return numeral(`${value}`).format("0,0");
+}
 exports.getProduct = async (req, res) => {
   await Product.findAll()
     .then((product) => {
@@ -39,6 +43,7 @@ exports.postProduct = async (req, res) => {
       });
     })
     .catch((e) => {
+      console.log(e);
       res.status(503).json({
         message: "Gagal Menambah Product",
       });
@@ -50,11 +55,11 @@ exports.patchProduct = async (req, res) => {
   const user = await User.findByPk(userIdFromHeaders);
   if (user.role == "customer") {
     return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Menambah Product",
+      message: "Hanya Admin Yang Diperbolehkan Mengubah Product",
     });
   }
-  const { title, price, stock } = req.body;
-  let data = { title, price, stock};
+  const { CategoryId } = req.body;
+  let data = { CategoryId };
   await Product.update(data, {
     where: {
       id: productId,
@@ -76,11 +81,51 @@ exports.patchProduct = async (req, res) => {
       });
     })
     .catch((e) => {
+      console.log(e);
       res.status(500).json({
         message: "Gagal Mengubah Product",
       });
     });
 };
+
+exports.putProduct = async (req, res) => {
+  const userIdFromHeaders = req.userId;
+  const productId = req.params.productId;
+  const user = await User.findByPk(userIdFromHeaders);
+  if (user.role == "customer") {
+    return res.status(401).json({
+      message: "Hanya Admin Yang Diperbolehkan Mengubah Product",
+    });
+  }
+  const { title, price, stock } = req.body;
+  let data = { title, price, stock};
+  await Product.update(data, {
+    where: {
+      id: productId,
+    },
+    returning: true,
+    plain: true,
+  })
+  .then((product) => {
+    res.status(200).json({
+      product: {
+        id: product[1].dataValues.id,
+        title: product[1].dataValues.title,
+        price: product[1].dataValues.price,
+        stock: product[1].dataValues.stock,
+        updatedAt: product[1].dataValues.updatedAt,
+        createdAt: product[1].dataValues.createdAt,
+        CategoryId: product[1].dataValues.CategoryId,
+      },
+    });
+  })  
+    .catch((err) => {
+      res.status(500).json({
+        message: "Gagal Mengubah Data",
+      });
+    });
+};
+
 exports.deleteProduct = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const productId = req.params.productId;

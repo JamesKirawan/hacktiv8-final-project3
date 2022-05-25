@@ -25,10 +25,27 @@ module.exports = (sequelize, DataTypes) => {
     price:  {
       type: DataTypes.INTEGER,
       allowNull: false,
+      validate: {
+        customValidator(value) {
+          if (value < 0) {
+            throw new Error("Price harus besar dari 0");
+          } else if (value > 50000000) {
+            throw new Error("Price harus tidak lebih dari 50000000");
+          }
+        },
+      },
     },
     stock: {
       type: DataTypes.INTEGER,
       allowNull: false,
+      validate: {
+        customValidator(value) {
+          console.log(value);
+          if (value.length < 5) {
+            throw new Error("Stock Harus Memiliki Minimal Panjang 5");
+          } 
+        },
+      },
     },
     CategoryId: DataTypes.INTEGER
   }, {

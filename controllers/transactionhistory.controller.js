@@ -1,22 +1,4 @@
-const { User, TransactionHistory } = require("../models");
-exports.getTransactionHistory = async (req, res) => {
-  const userIdFromHeaders = req.userId;
-  const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
-    return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Melihat Transaction History",
-    });
-  }
-  await TransactionHistory.findAll()
-    .then((transactionhistory) => {
-      res.status(200).json({ TransactionHistories: transactionhistory });
-    })
-    .catch((e) => {
-      res.status(503).json({
-        message: "Gagal Memuat Transaction History",
-      });
-    });
-};
+const { User, TransactionHistory, Product } = require("../models");
 exports.postTransactionHistory = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const user = await User.findByPk(userIdFromHeaders);
@@ -25,11 +7,11 @@ exports.postTransactionHistory = async (req, res) => {
       message: "Hanya Admin Yang Diperbolehkan Menambah Transaction History",
     });
   }
-  const { ProductId, UserId, quantity, total_price } = req.body;
+  const { ProductId, quantity, UserId, total_price} = req.body;
   await TransactionHistory.create({
     ProductId,
-    UserId, 
-    quantity, 
+    quantity,
+    UserId,
     total_price,
   })
     .then((transactionhistory) => {
@@ -52,65 +34,71 @@ exports.postTransactionHistory = async (req, res) => {
       });
     });
 };
-exports.patchTransactionHistory = async (req, res) => {
-  const userIdFromHeaders = req.userId;
-  const transactionhistoryId = req.params.transactionhistoryId;
-  const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
-    return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Menambah Transaction History",
-    });
-  }
-  const { ProductId, UserId, quantity, total_price  } = req.body;
-  let data = { ProductId, UserId, quantity, total_price  };
-  await TransactionHistory.update(data, {
-    where: {
-      id: transactionhistoryId,
-    },
-    returning: true,
-    plain: true,
+
+exports.getTransactionHistoryUser = async (req, res) => {
+  await TransactionHistory.findAll({
+    include: [
+      {
+        model: Product,
+        as: "product",
+        attributes: ["id", "title", "price", "stock", "CategoryId"],
+      },
+    ]
   })
     .then((transactionhistory) => {
-      res.status(200).json({
-        transactionhistory: {
-          id: transactionhistory[1].dataValues.id,
-          ProductId: transactionhistory[1].dataValues.ProductId,          
-          UserId: transactionhistory[1].dataValues.UserId,
-          quantity: transactionhistory[1].dataValues.quantity,          
-          total_price: transactionhistory[1].dataValues.total_price,
-          updatedAt: transactionhistory[1].dataValues.updatedAt,
-          createdAt: transactionhistory[1].dataValues.createdAt,
-        },
-      });
+      res.status(200).json({ TransactionHistories: transactionhistory });
     })
     .catch((e) => {
-      res.status(500).json({
-        message: "Gagal Mengubah Transaction History",
+      res.status(503).json({
+        message: "Gagal Memuat Transaction History",
       });
     });
 };
-exports.deleteTransactionHistory = async (req, res) => {
-  const userIdFromHeaders = req.userId;
-  const transactionhistoryId = req.params.transactionhistoryId;
-  const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
-    return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Menambah Transaction History",
-    });
-  }
-  await TransactionHistory.destroy({
-    where: {
-      id: transactionhistoryId,
-    },
+
+exports.getTransactionHistoryAdmin = async (req, res) => {
+  await TransactionHistory.findAll({
+    include: [
+      {
+        model: Product,
+        as: "product",
+        attributes: ["id", "title", "price", "stock", "CategoryId"],
+      },
+      {
+        model: User,
+        as: "user",
+        attributes: ["id", "email", "balance", "gender", "role"],
+      },
+    ]
   })
-    .then((result) => {
-      res.status(200).json({
-        message: "Transaction History has been successfully deleted",
-      });
+    .then((transactionhistory) => {
+      res.status(200).json({ TransactionHistories: transactionhistory });
     })
-    .catch((err) => {
-      res.status(500).json({
-        message: "Gagal Menghapus Transaction History",
+    .catch((e) => {
+      res.status(503).json({
+        message: "Gagal Memuat Transaction History",
       });
     });
 };
+
+exports.getTransactionHistoryId = async (req, res) => {  
+  const transactionhistoryId = req.params.transactionhistoryId;
+  await TransactionHistory.findOne({ 
+    where : {id:transactionhistoryId},
+    include: [
+      {
+        model: Product,
+        as: "product",
+        attributes: ["id", "title", "price", "stock", "CategoryId"],
+      },
+    ]
+  })
+    .then((transactionhistory) => {
+      res.status(200).json({ TransactionHistories: transactionhistory });
+    })
+    .catch((e) => {
+      res.status(503).json({
+        message: "Gagal Memuat Transaction History",
+      });
+    });
+};
+
