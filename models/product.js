@@ -1,7 +1,5 @@
-'use strict';
-const {
-  Model
-} = require('sequelize');
+"use strict";
+const { Model } = require("sequelize");
 module.exports = (sequelize, DataTypes) => {
   class Product extends Model {
     /**
@@ -17,23 +15,43 @@ module.exports = (sequelize, DataTypes) => {
       });
     }
   }
-  Product.init({
-    title:  {
-      type: DataTypes.STRING,
-      allowNull: false,
+  Product.init(
+    {
+      title: {
+        type: DataTypes.STRING,
+        allowNull: false,
+      },
+      price: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+          customValidator(value) {
+            if (value > 50000000) {
+              throw new Error("Price Tidak Boleh Melebihi Angka 50000000");
+            }
+            if (value < 0) {
+              throw new Error("Price Tidak Boleh Kurang Dari Angka 0");
+            }
+          },
+        },
+      },
+      stock: {
+        type: DataTypes.INTEGER,
+        allowNull: false,
+        validate: {
+          customValidator(value) {
+            if (value < 5) {
+              throw new Error("Stock Tidak Boleh Kurang Dari Angka 5");
+            }
+          },
+        },
+      },
+      CategoryId: DataTypes.INTEGER,
     },
-    price:  {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    stock: {
-      type: DataTypes.INTEGER,
-      allowNull: false,
-    },
-    CategoryId: DataTypes.INTEGER
-  }, {
-    sequelize,
-    modelName: 'Product',
-  });
+    {
+      sequelize,
+      modelName: "Product",
+    }
+  );
   return Product;
 };

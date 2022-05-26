@@ -1,116 +1,225 @@
-const { User, TransactionHistory } = require("../models");
-exports.getTransactionHistory = async (req, res) => {
-  const userIdFromHeaders = req.userId;
-  const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
-    return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Melihat Transaction History",
-    });
-  }
-  await TransactionHistory.findAll()
-    .then((transactionhistory) => {
-      res.status(200).json({ TransactionHistories: transactionhistory });
-    })
-    .catch((e) => {
-      res.status(503).json({
-        message: "Gagal Memuat Transaction History",
-      });
-    });
-};
+const { User, Product, Category, TransactionHistory } = require("../models");
+const numeral = require("numeral");
+function string2money(value) {
+  return numeral(`${value}`).format("0,0");
+}
 exports.postTransactionHistory = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
-    return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Menambah Transaction History",
+  const { productId, quantity } = req.body;
+  const product = await Product.findByPk(productId);
+  if (product) {
+    const stock = product.dataValues.stock;
+    if (stock >= quantity) {
+      const balance = user.dataValues.balance;
+      const needBalance = quantity * product.dataValues.price;
+      if (balance >= needBalance) {
+        const curStock = stock - quantity;
+        let dataProduct = { stock: curStock };
+        const categoryId = product.dataValues.CategoryId;
+        const category = await Category.findByPk(categoryId);
+        const curSoldAmount =
+          category.dataValues.sold_product_amount + quantity;
+        let dataCategory = { sold_product_amount: curSoldAmount };
+        const curBalance = balance - needBalance;
+        let dataUser = { balance: curBalance };
+        try {
+          await Category.update(dataCategory, {
+            where: {
+              id: categoryId,
+            },
+          });
+          await Product.update(dataProduct, {
+            where: {
+              id: productId,
+            },
+          });
+          await User.update(dataUser, {
+            where: {
+              id: userIdFromHeaders,
+            },
+          });
+          let dataTransactionHistory = {
+            ProductId: product.dataValues.id,
+            UserId: user.dataValues.id,
+            quantity: quantity,
+            total_price: needBalance,
+          };
+          await TransactionHistory.create(dataTransactionHistory);
+          res.status(201).json({
+            message: "You have successfully purchase the product",
+            transactionBill: {
+              total_price: `Rp ${string2money(needBalance)}`,
+              quantity: quantity,
+              product_name: product.dataValues.title,
+            },
+          });
+        } catch (e) {
+          res.status(503).json({
+            message: "Gagal Melakukan Pembelian",
+          });
+        }
+      } else {
+        res.status(400).json({
+          message: "Saldo Anda Tidak Cukup Untuk Membeli Ini",
+        });
+      }
+    } else {
+      res.status(400).json({
+        message: "Stock Tidak Cukup",
+      });
+    }
+  } else {
+    res.status(503).json({
+      message: "Product Tidak Ada",
     });
   }
-  const { ProductId, UserId, quantity, total_price } = req.body;
-  await TransactionHistory.create({
-    ProductId,
-    UserId, 
-    quantity, 
-    total_price,
-  })
-    .then((transactionhistory) => {
-      res.status(201).json({
-        transactionhistory: {
-          id: transactionhistory.id,
-          ProductId: transactionhistory.ProductId,
-          UserId: transactionhistory.UserId,
-          quantity: transactionhistory.quantity,
-          total_price: transactionhistory.total_price,
-          updatedAt: transactionhistory.updatedAt,
-          createdAt: transactionhistory.createdAt,
-          },
-      });
-    })
-    .catch((e) => {
-      console.log(e);
-      res.status(503).json({
-        message: "Gagal Menambah Transaction History",
-      });
-    });
 };
-exports.patchTransactionHistory = async (req, res) => {
+
+exports.getTransactionHistoryUser = async (req, res) => {
   const userIdFromHeaders = req.userId;
-  const transactionhistoryId = req.params.transactionhistoryId;
   const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
-    return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Menambah Transaction History",
-    });
-  }
-  const { ProductId, UserId, quantity, total_price  } = req.body;
-  let data = { ProductId, UserId, quantity, total_price  };
-  await TransactionHistory.update(data, {
+  await TransactionHistory.findAll({
+    include: [
+      {
+        model: Product,
+        as: "product",
+      },
+    ],
     where: {
-      id: transactionhistoryId,
+      UserId: user.dataValues.id,
     },
-    returning: true,
-    plain: true,
-  })
-    .then((transactionhistory) => {
-      res.status(200).json({
-        transactionhistory: {
-          id: transactionhistory[1].dataValues.id,
-          ProductId: transactionhistory[1].dataValues.ProductId,          
-          UserId: transactionhistory[1].dataValues.UserId,
-          quantity: transactionhistory[1].dataValues.quantity,          
-          total_price: transactionhistory[1].dataValues.total_price,
-          updatedAt: transactionhistory[1].dataValues.updatedAt,
-          createdAt: transactionhistory[1].dataValues.createdAt,
+  }).then((transactionHistory) => {
+    let transactionHistories = [];
+    for (i = 0; i < transactionHistory.length; i++) {
+      transactionHistories.push({
+        ProductId: transactionHistory[i].dataValues.ProductId,
+        UserId: transactionHistory[i].dataValues.UserId,
+        quantity: transactionHistory[i].dataValues.quantity,
+        total_price: transactionHistory[i].dataValues.total_price,
+        createdAt: transactionHistory[i].dataValues.createdAt,
+        updatedAt: transactionHistory[i].dataValues.updatedAt,
+        Product: {
+          id: transactionHistory[i].dataValues.product.id,
+          title: transactionHistory[i].dataValues.product.title,
+          price: `Rp ${string2money(
+            transactionHistory[i].dataValues.product.price
+          )}`,
+          stock: transactionHistory[i].dataValues.product.stock,
+          CategoryId: transactionHistory[i].dataValues.product.CategoryId,
         },
       });
-    })
-    .catch((e) => {
-      res.status(500).json({
-        message: "Gagal Mengubah Transaction History",
-      });
+    }
+    res.status(200).json({
+      transactionHistories,
     });
+  });
 };
-exports.deleteTransactionHistory = async (req, res) => {
+
+exports.getTransactionHistoryAdmin = async (req, res) => {
   const userIdFromHeaders = req.userId;
-  const transactionhistoryId = req.params.transactionhistoryId;
   const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
+  if (user.role === "customer") {
     return res.status(401).json({
-      message: "Hanya Admin Yang Diperbolehkan Menambah Transaction History",
+      message: "Hanya Admin Yang Dapat Melihat History Transaksi Admin",
     });
   }
-  await TransactionHistory.destroy({
-    where: {
-      id: transactionhistoryId,
-    },
-  })
-    .then((result) => {
-      res.status(200).json({
-        message: "Transaction History has been successfully deleted",
+  await TransactionHistory.findAll({
+    include: [
+      {
+        model: Product,
+        as: "product",
+      },
+      {
+        model: User,
+        as: "user",
+      },
+    ],
+  }).then((transactionHistory) => {
+    let transactionHistories = [];
+    for (i = 0; i < transactionHistory.length; i++) {
+      transactionHistories.push({
+        ProductId: transactionHistory[i].dataValues.ProductId,
+        UserId: transactionHistory[i].dataValues.UserId,
+        quantity: transactionHistory[i].dataValues.quantity,
+        total_price: transactionHistory[i].dataValues.total_price,
+        createdAt: transactionHistory[i].dataValues.createdAt,
+        updatedAt: transactionHistory[i].dataValues.updatedAt,
+        Product: {
+          id: transactionHistory[i].dataValues.product.id,
+          title: transactionHistory[i].dataValues.product.title,
+          price: `Rp ${string2money(
+            transactionHistory[i].dataValues.product.price
+          )}`,
+          stock: transactionHistory[i].dataValues.product.stock,
+          CategoryId: transactionHistory[i].dataValues.product.CategoryId,
+        },
+        User: {
+          id: transactionHistory[i].dataValues.user.id,
+          email: transactionHistory[i].dataValues.user.email,
+          balance: `Rp ${string2money(
+            transactionHistory[i].dataValues.user.balance
+          )}`,
+          gender: transactionHistory[i].dataValues.user.gender,
+          role: transactionHistory[i].dataValues.user.role,
+        },
       });
-    })
-    .catch((err) => {
-      res.status(500).json({
-        message: "Gagal Menghapus Transaction History",
-      });
+    }
+    res.status(200).json({
+      transactionHistories,
     });
+  });
+};
+
+exports.getTransactionHistory = async (req, res) => {
+  const userIdFromHeaders = req.userId;
+  const transactionId = req.params.transactionId;
+  const user = await User.findByPk(userIdFromHeaders);
+  const transaction = await TransactionHistory.findByPk(transactionId);
+  if (user.role == "customer" && transaction.UserId != user.id) {
+    return res.status(401).json({
+      message: "Anda Tidak Memiliki Hak Untuk Melihat Transaksi Ini",
+    });
+  }
+  if (transaction) {
+    await TransactionHistory.findOne({
+      include: [
+        {
+          model: Product,
+          as: "product",
+        },
+      ],
+      where: {
+        id: transactionId,
+      },
+    })
+      .then((transactionHistory) => {
+        res.status(200).json({
+          ProductId: transactionHistory.dataValues.ProductId,
+          UserId: transactionHistory.dataValues.UserId,
+          quantity: transactionHistory.dataValues.quantity,
+          total_price: transactionHistory.dataValues.total_price,
+          createdAt: transactionHistory.dataValues.createdAt,
+          updatedAt: transactionHistory.dataValues.updatedAt,
+          Product: {
+            id: transactionHistory.dataValues.product.id,
+            title: transactionHistory.dataValues.product.title,
+            price: `Rp ${string2money(
+              transactionHistory.dataValues.product.price
+            )}`,
+            stock: transactionHistory.dataValues.product.stock,
+            CategoryId: transactionHistory.dataValues.product.CategoryId,
+          },
+        });
+      })
+      .catch((e) => {
+        res.status(503).json({
+          message: "Gagal Memuat Transaction History",
+        });
+      });
+  } else {
+    res.status(500).json({
+      message: "Transaction History Tidak Ditemukan",
+    });
+  }
 };

@@ -1,4 +1,8 @@
-const { User, Category } = require("../models");
+const { User, Category, Product } = require("../models");
+const numeral = require("numeral");
+function string2money(value) {
+  return numeral(`${value}`).format("0,0");
+}
 exports.getCategory = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const user = await User.findByPk(userIdFromHeaders);
@@ -7,9 +11,43 @@ exports.getCategory = async (req, res) => {
       message: "Hanya Admin Yang Diperbolehkan Melihat Category",
     });
   }
-  await Category.findAll()
+  await Category.findAll({
+    include: [
+      {
+        model: Product,
+        as: "product",
+      },
+    ],
+  })
     .then((category) => {
-      res.status(200).json({ categories: category });
+      let categories = [];
+      for (i = 0; i < category.length; i++) {
+        let products = [];
+        if (category[i].dataValues.product.length > 0) {
+          for (j = 0; j < category[i].dataValues.product.length; j++) {
+            products.push({
+              id: category[i].dataValues.product[j].id,
+              title: category[i].dataValues.product[j].title,
+              price: `Rp ${string2money(
+                category[i].dataValues.product[j].price
+              )}`,
+              stock: category[i].dataValues.product[j].stock,
+              categoryId: category[i].dataValues.product[j].categoryId,
+              createdAt: category[i].dataValues.product[j].createdAt,
+              updatedAt: category[i].dataValues.product[j].updatedAt,
+            });
+          }
+        }
+        categories.push({
+          id: category[i].dataValues.id,
+          type: category[i].dataValues.type,
+          sold_product_amount: category[i].dataValues.sold_product_amount,
+          createdAt: category[i].dataValues.createdAt,
+          updatedAt: category[i].dataValues.updatedAt,
+          Products: products,
+        });
+      }
+      res.status(200).json({ categories });
     })
     .catch((e) => {
       res.status(503).json({
