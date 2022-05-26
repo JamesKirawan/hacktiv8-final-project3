@@ -88,6 +88,7 @@ exports.patchCategory = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const categoryId = req.params.categoryId;
   const user = await User.findByPk(userIdFromHeaders);
+  const category = await Category.findByPk(categoryId);
   if (user.role == "customer") {
     return res.status(401).json({
       message: "Hanya Admin Yang Diperbolehkan Menambah Category",
@@ -95,29 +96,35 @@ exports.patchCategory = async (req, res) => {
   }
   const { type } = req.body;
   let data = { type };
-  await Category.update(data, {
-    where: {
-      id: categoryId,
-    },
-    returning: true,
-    plain: true,
-  })
-    .then((category) => {
-      res.status(200).json({
-        category: {
-          id: category[1].dataValues.id,
-          type: category[1].dataValues.type,
-          updatedAt: category[1].dataValues.updatedAt,
-          createdAt: category[1].dataValues.createdAt,
-          sold_product_amount: category[1].dataValues.sold_product_amount,
-        },
-      });
+  if (category) {
+    await Category.update(data, {
+      where: {
+        id: categoryId,
+      },
+      returning: true,
+      plain: true,
     })
-    .catch((e) => {
-      res.status(500).json({
-        message: e.message,
+      .then((category) => {
+        res.status(200).json({
+          category: {
+            id: category[1].dataValues.id,
+            type: category[1].dataValues.type,
+            updatedAt: category[1].dataValues.updatedAt,
+            createdAt: category[1].dataValues.createdAt,
+            sold_product_amount: category[1].dataValues.sold_product_amount,
+          },
+        });
+      })
+      .catch((e) => {
+        res.status(500).json({
+          message: e.message,
+        });
       });
+  } else {
+    res.status(503).json({
+      message: "Category Id Tidak Valid",
     });
+  }
 };
 exports.deleteCategory = async (req, res) => {
   const userIdFromHeaders = req.userId;

@@ -99,6 +99,11 @@ describe("CategoryController.patchCategory", () => {
     await CategoryController.patchCategory(req, res);
     expect(res.statusCode).toBe(500);
   });
+  it("should return 503", async () => {
+    User.findByPk.mockResolvedValueOnce(adminData).mockResolvedValue(null);
+    await CategoryController.patchCategory(req, res);
+    expect(res.statusCode).toBe(503);
+  });
 });
 
 describe("CategoryController.deleteCategory", () => {
