@@ -135,19 +135,26 @@ exports.deleteCategory = async (req, res) => {
       message: "Hanya Admin Yang Diperbolehkan Menambah Category",
     });
   }
-  await Category.destroy({
-    where: {
-      id: categoryId,
-    },
-  })
-    .then((result) => {
-      res.status(200).json({
-        message: "Category has been successfully deleted",
-      });
+  const category = await Category.findByPk(categoryId);
+  if (category) {
+    await Category.destroy({
+      where: {
+        id: categoryId,
+      },
     })
-    .catch((err) => {
-      res.status(500).json({
-        message: "Gagal Menghapus Category",
+      .then((result) => {
+        res.status(200).json({
+          message: "Category has been successfully deleted",
+        });
+      })
+      .catch((err) => {
+        res.status(500).json({
+          message: "Gagal Menghapus Category",
+        });
       });
+  } else {
+    res.status(503).json({
+      message: "Category Id Tidak Valid",
     });
+  }
 };

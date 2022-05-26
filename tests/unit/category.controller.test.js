@@ -125,4 +125,9 @@ describe("CategoryController.deleteCategory", () => {
     await CategoryController.deleteCategory(req, res);
     expect(res.statusCode).toBe(500);
   });
+  it("should return 503", async () => {
+    User.findByPk.mockResolvedValueOnce(adminData).mockResolvedValue(null);
+    await CategoryController.deleteCategory(req, res);
+    expect(res.statusCode).toBe(503);
+  });
 });
