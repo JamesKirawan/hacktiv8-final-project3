@@ -70,7 +70,7 @@ exports.postTransactionHistory = async (req, res) => {
       });
     }
   } else {
-    res.status(503).json({
+    res.status(500).json({
       message: "Product Tidak Ada",
     });
   }
@@ -89,31 +89,37 @@ exports.getTransactionHistoryUser = async (req, res) => {
     where: {
       UserId: user.dataValues.id,
     },
-  }).then((transactionHistory) => {
-    let transactionHistories = [];
-    for (i = 0; i < transactionHistory.length; i++) {
-      transactionHistories.push({
-        ProductId: transactionHistory[i].dataValues.ProductId,
-        UserId: transactionHistory[i].dataValues.UserId,
-        quantity: transactionHistory[i].dataValues.quantity,
-        total_price: transactionHistory[i].dataValues.total_price,
-        createdAt: transactionHistory[i].dataValues.createdAt,
-        updatedAt: transactionHistory[i].dataValues.updatedAt,
-        Product: {
-          id: transactionHistory[i].dataValues.product.id,
-          title: transactionHistory[i].dataValues.product.title,
-          price: `Rp ${string2money(
-            transactionHistory[i].dataValues.product.price
-          )}`,
-          stock: transactionHistory[i].dataValues.product.stock,
-          CategoryId: transactionHistory[i].dataValues.product.CategoryId,
-        },
+  })
+    .then((transactionHistory) => {
+      let transactionHistories = [];
+      for (i = 0; i < transactionHistory.length; i++) {
+        transactionHistories.push({
+          ProductId: transactionHistory[i].dataValues.ProductId,
+          UserId: transactionHistory[i].dataValues.UserId,
+          quantity: transactionHistory[i].dataValues.quantity,
+          total_price: transactionHistory[i].dataValues.total_price,
+          createdAt: transactionHistory[i].dataValues.createdAt,
+          updatedAt: transactionHistory[i].dataValues.updatedAt,
+          Product: {
+            id: transactionHistory[i].dataValues.product.id,
+            title: transactionHistory[i].dataValues.product.title,
+            price: `Rp ${string2money(
+              transactionHistory[i].dataValues.product.price
+            )}`,
+            stock: transactionHistory[i].dataValues.product.stock,
+            CategoryId: transactionHistory[i].dataValues.product.CategoryId,
+          },
+        });
+      }
+      res.status(200).json({
+        transactionHistories,
       });
-    }
-    res.status(200).json({
-      transactionHistories,
+    })
+    .catch((e) => {
+      res.status(503).json({
+        message: "Gagal Memuat Transaction History",
+      });
     });
-  });
 };
 
 exports.getTransactionHistoryAdmin = async (req, res) => {
@@ -135,40 +141,46 @@ exports.getTransactionHistoryAdmin = async (req, res) => {
         as: "user",
       },
     ],
-  }).then((transactionHistory) => {
-    let transactionHistories = [];
-    for (i = 0; i < transactionHistory.length; i++) {
-      transactionHistories.push({
-        ProductId: transactionHistory[i].dataValues.ProductId,
-        UserId: transactionHistory[i].dataValues.UserId,
-        quantity: transactionHistory[i].dataValues.quantity,
-        total_price: transactionHistory[i].dataValues.total_price,
-        createdAt: transactionHistory[i].dataValues.createdAt,
-        updatedAt: transactionHistory[i].dataValues.updatedAt,
-        Product: {
-          id: transactionHistory[i].dataValues.product.id,
-          title: transactionHistory[i].dataValues.product.title,
-          price: `Rp ${string2money(
-            transactionHistory[i].dataValues.product.price
-          )}`,
-          stock: transactionHistory[i].dataValues.product.stock,
-          CategoryId: transactionHistory[i].dataValues.product.CategoryId,
-        },
-        User: {
-          id: transactionHistory[i].dataValues.user.id,
-          email: transactionHistory[i].dataValues.user.email,
-          balance: `Rp ${string2money(
-            transactionHistory[i].dataValues.user.balance
-          )}`,
-          gender: transactionHistory[i].dataValues.user.gender,
-          role: transactionHistory[i].dataValues.user.role,
-        },
+  })
+    .then((transactionHistory) => {
+      let transactionHistories = [];
+      for (i = 0; i < transactionHistory.length; i++) {
+        transactionHistories.push({
+          ProductId: transactionHistory[i].dataValues.ProductId,
+          UserId: transactionHistory[i].dataValues.UserId,
+          quantity: transactionHistory[i].dataValues.quantity,
+          total_price: transactionHistory[i].dataValues.total_price,
+          createdAt: transactionHistory[i].dataValues.createdAt,
+          updatedAt: transactionHistory[i].dataValues.updatedAt,
+          Product: {
+            id: transactionHistory[i].dataValues.product.id,
+            title: transactionHistory[i].dataValues.product.title,
+            price: `Rp ${string2money(
+              transactionHistory[i].dataValues.product.price
+            )}`,
+            stock: transactionHistory[i].dataValues.product.stock,
+            CategoryId: transactionHistory[i].dataValues.product.CategoryId,
+          },
+          User: {
+            id: transactionHistory[i].dataValues.user.id,
+            email: transactionHistory[i].dataValues.user.email,
+            balance: `Rp ${string2money(
+              transactionHistory[i].dataValues.user.balance
+            )}`,
+            gender: transactionHistory[i].dataValues.user.gender,
+            role: transactionHistory[i].dataValues.user.role,
+          },
+        });
+      }
+      res.status(200).json({
+        transactionHistories,
       });
-    }
-    res.status(200).json({
-      transactionHistories,
+    })
+    .catch((e) => {
+      res.status(503).json({
+        message: "Gagal Memuat Transaction History",
+      });
     });
-  });
 };
 
 exports.getTransactionHistory = async (req, res) => {
@@ -194,6 +206,7 @@ exports.getTransactionHistory = async (req, res) => {
       },
     })
       .then((transactionHistory) => {
+        console.log(transactionHistory);
         res.status(200).json({
           ProductId: transactionHistory.dataValues.ProductId,
           UserId: transactionHistory.dataValues.UserId,

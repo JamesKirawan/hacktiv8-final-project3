@@ -29,7 +29,7 @@ exports.getProduct = async (req, res) => {
 exports.postProduct = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
+  if (user?.role == "customer") {
     return res.status(401).json({
       message: "Hanya Admin Yang Diperbolehkan Menambah Product",
     });
@@ -57,7 +57,7 @@ exports.postProduct = async (req, res) => {
         });
       })
       .catch((e) => {
-        res.status(503).json({
+        res.status(500).json({
           message: e.message,
         });
       });
@@ -72,7 +72,7 @@ exports.putProduct = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const productId = req.params.productId;
   const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
+  if (user?.role == "customer") {
     return res.status(401).json({
       message: "Hanya Admin Yang Diperbolehkan Mengubah Product",
     });
@@ -117,7 +117,7 @@ exports.patchProduct = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const productId = req.params.productId;
   const user = await User.findByPk(userIdFromHeaders);
-  if (user.role === "customer") {
+  if (user?.role === "customer") {
     return res.status(401).json({
       message: "Hanya Admin Yang Diperbolehkan Mengubah Product",
     });
@@ -162,7 +162,7 @@ exports.deleteProduct = async (req, res) => {
   const userIdFromHeaders = req.userId;
   const productId = req.params.productId;
   const user = await User.findByPk(userIdFromHeaders);
-  if (user.role == "customer") {
+  if (user?.role == "customer") {
     return res.status(401).json({
       message: "Hanya Admin Yang Diperbolehkan Menghapus Product",
     });
