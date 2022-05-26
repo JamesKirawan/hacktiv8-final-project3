@@ -145,6 +145,7 @@ describe("ProductController.patchProduct", () => {
   it("should return 503", async () => {
     User.findByPk.mockResolvedValue(adminData);
     Category.findByPk.mockResolvedValue(null);
+    Product.findByPk.mockResolvedValue(null);
     await ProductController.patchProduct(req, res);
     expect(res.statusCode).toBe(503);
   });

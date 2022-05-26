@@ -126,40 +126,41 @@ exports.patchProduct = async (req, res) => {
   const category = await Category.findByPk(CategoryId);
   const product = await Product.findByPk(productId);
   if (product) {
+    let data = { CategoryId };
+    if (category) {
+      await Product.update(data, {
+        where: {
+          id: productId,
+        },
+        returning: true,
+        plain: true,
+      })
+        .then((product) => {
+          res.status(200).json({
+            product: {
+              id: product[1].dataValues.id,
+              title: product[1].dataValues.title,
+              price: product[1].dataValues.price,
+              stock: product[1].dataValues.stock,
+              updatedAt: product[1].dataValues.updatedAt,
+              createdAt: product[1].dataValues.createdAt,
+              CategoryId: product[1].dataValues.CategoryId,
+            },
+          });
+        })
+        .catch((e) => {
+          res.status(500).json({
+            message: e.message,
+          });
+        });
+    } else {
+      res.status(503).json({
+        message: "Category Id Tidak Valid",
+      });
+    }
+  } else {
     return res.status(503).json({
       message: "Product Id Tidak Valid",
-    });
-  }
-  let data = { CategoryId };
-  if (category) {
-    await Product.update(data, {
-      where: {
-        id: productId,
-      },
-      returning: true,
-      plain: true,
-    })
-      .then((product) => {
-        res.status(200).json({
-          product: {
-            id: product[1].dataValues.id,
-            title: product[1].dataValues.title,
-            price: product[1].dataValues.price,
-            stock: product[1].dataValues.stock,
-            updatedAt: product[1].dataValues.updatedAt,
-            createdAt: product[1].dataValues.createdAt,
-            CategoryId: product[1].dataValues.CategoryId,
-          },
-        });
-      })
-      .catch((e) => {
-        res.status(500).json({
-          message: e.message,
-        });
-      });
-  } else {
-    res.status(503).json({
-      message: "Category Id Tidak Valid",
     });
   }
 };
