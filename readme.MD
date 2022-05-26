@@ -8,3 +8,5 @@ Run this command to produce this app
 6. npm run nodemon //to run this app using nodemon
 7. npm run start //to run this app by default
 8. npm run test //to run test case (optional)
+
+Link Heroku : https://hacktiv8-final-project3.herokuapp.com/
