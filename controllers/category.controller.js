@@ -80,7 +80,7 @@ exports.postCategory = async (req, res) => {
     })
     .catch((e) => {
       res.status(503).json({
-        message: "Gagal Menambah Category",
+        message: e.message,
       });
     });
 };
@@ -115,7 +115,7 @@ exports.patchCategory = async (req, res) => {
     })
     .catch((e) => {
       res.status(500).json({
-        message: "Gagal Mengubah Category",
+        message: e.message,
       });
     });
 };

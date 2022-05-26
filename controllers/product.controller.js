@@ -103,7 +103,7 @@ exports.putProduct = async (req, res) => {
       })
       .catch((e) => {
         res.status(500).json({
-          message: "Gagal Mengubah Product",
+          message: e.message,
         });
       });
   } else {
@@ -124,6 +124,12 @@ exports.patchProduct = async (req, res) => {
   }
   const { CategoryId } = req.body;
   const category = await Category.findByPk(CategoryId);
+  const product = await Product.findByPk(productId);
+  if (product) {
+    return res.status(503).json({
+      message: "Product Id Tidak Valid",
+    });
+  }
   let data = { CategoryId };
   if (category) {
     await Product.update(data, {
@@ -148,7 +154,7 @@ exports.patchProduct = async (req, res) => {
       })
       .catch((e) => {
         res.status(500).json({
-          message: "Gagal Mengubah Product",
+          message: e.message,
         });
       });
   } else {
